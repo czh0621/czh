@@ -155,7 +155,6 @@ namespace czh {
         return prom.get_future();
     };
 
-    template<>
     Future<void> MakeReadyFuture() {
         Promise<void> prom;
         prom.set_value();

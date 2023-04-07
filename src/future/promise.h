@@ -139,7 +139,7 @@ namespace czh {
         Future<T> get_future() {
             bool expect = false;
             if (!m_shared_state->m_retrived.compare_exchange_strong(expect, true)) {
-                std::runtime_error("promise value has retrived!");
+                std::runtime_error("promise value has been retrieved!");
             }
             return Future<T>(m_shared_state);
         }
