@@ -8,15 +8,17 @@ namespace czh {
     template<typename T>
     class Future {
     public:
-        Future(std::shared_ptr<SharedState<T>> ptr) : m_shared_state(ptr) {}
+        Future() = default;
+
+        explicit Future(std::shared_ptr<SharedState<T>> ptr) : m_shared_state(ptr) {}
 
         Future(const Future &) = delete;
 
-        Future(Future &&) = default;
+        Future(Future &&fut) = default;
 
         Future &operator=(const Future &) = delete;
 
-        Future &operator=(Future &&) = default;
+        Future &operator=(Future &&fut) = default;
 
         typename SharedState<T>::ValueType wait(
                 const std::chrono::milliseconds &time = std::chrono::milliseconds(24 *
@@ -57,13 +59,17 @@ namespace czh {
             return then_impl<F, R>(nullptr, std::forward<F>(f), Args{});
         }
 
+        bool valid() const {
+            return m_shared_state != nullptr;
+        }
+
     private:
         template<typename F, typename R, typename... Args>
         auto then_impl(void *, F &&f, ResultOfWrapper<F, Args...>) ->
         typename std::enable_if_t<!R::IsFutureReturnType::value,
                 typename R::ReturnFutureType> {
-            using real_return_type = typename R::Return_type::type;
-            Promise<real_return_type> promise;
+            using FuncReturnType = typename R::Return_type::type;
+            Promise<FuncReturnType> promise;
             auto fut = promise.get_future();
             std::unique_lock<std::mutex> lck(m_shared_state->m_then_lck);
             if (m_shared_state->m_status == FutureStatus::Timeout) {
@@ -78,7 +84,7 @@ namespace czh {
                     if (m_shared_state->m_then) {
                         try {
                             m_shared_state->m_then(std::move(m_shared_state->m_value));
-                        } catch (const std::exception &e) {
+                        } catch (const std::exception &exp) {
                             m_shared_state->m_then(
                                     typename TryWrapper<T>::type(std::current_exception()));
                         }
@@ -88,55 +94,86 @@ namespace czh {
             return fut;
         }
 
-//  template <typename F, typename R, typename... Args>
-//  auto then_impl(void *, F &&f, ResultOfWrapper<F, Args...>) ->
-//      typename std::enable_if_t<R::IsFutureReturnType::value,
-//                                typename R::ReturnFutureType> {
-//    using real_return_type = typename R::IsFutureReturnType::inner_type;
-//    Promise<real_return_type> prom;
-//    auto fut = prom.get_future();
-//    std::unique_lock<std::mutex> lck(m_shared_state->m_then_lck);
-//    if (m_shared_state->m_status == FutureStatus::Timeout) {
-//    } else {
-//      set_callback(
-//          prom = std::move(promise),
-//          func = std::forward<F>(f)(typename TryWrapper<T>::type && t) {
-//            auto cb = [func = std::move(func), prom = std::move(prom),
-//                       t = std::move(t)]() mutable {
-//              decltype(func(t.template get<Args>()...)) inner_fut;
-//              if (t.has_exception()) {
-//                inner_fut = func(t.excpetion());
-//              } else {
-//                inner_fut = func(t.template get<Args>()...);
-//              }
-//              std::unique_lock<std::mutex> lck(
-//                  inner_fut.m_shared_state->m_then_lck);
-//              if (inner_fut.m_shared_state->m_status == FutureStatus::Timeout) {
-//              } else {
-//                inner_fut.set_callback(
-//                    [prom = std::move(prom)](
-//                        typename TryWrapper<real_return_type>::type &&t) {
-//                      prom.set_value(std::move(t));
-//                    });
-//                if (inner_fut.m_shared_state->m_status == FutureStatus::Done) {
-//                  try {
-//                    inner_fut.m_shared_state->m_then(
-//                        std::move(inner_fut.m_shared_state->m_value));
-//                  } catch (const std::exception &exp) {
-//                    inner_fut.m_shared_state->m_then(
-//                        typename TryWrapper<real_return_type>::type t(
-//                            std::current_exception()););
-//                  }
-//                }
-//              }
-//            };
-//            cb();
-//          });
-//    }
-//    return fut;
-//  }
+        template<typename F, typename R, typename ...Args>
+        auto
+        then_impl(void *, F &&f, ResultOfWrapper<F, Args...>) -> typename std::enable_if_t<R::IsFutureReturnType::value,
+                typename R::ReturnFutureType> {
+            static_assert(sizeof...(Args) <= 1, "Args must be not more than one!");
+            using FuncReturnType = typename R::IsFutureReturnType::inner_type;
+            Promise<FuncReturnType> prom;
+            auto next_fut = prom.get_future();
+            std::unique_lock<std::mutex> lck(m_shared_state->m_then_lck);
+            if (m_shared_state->m_status == FutureStatus::Timeout) {
+
+            } else {
+                set_callback(
+                        [prom = std::move(prom), func = std::forward<F>(f)](
+                                typename TryWrapper<T>::type &&t) mutable {
+                            auto cb = [prom, func, res = std::move(t)]() mutable {
+                                decltype(func(res.template get<Args>()...)) inner_fut;
+                                try {
+                                    if (res.has_exception()) {
+                                        inner_fut = func(
+                                                typename TryWrapper<typename std::decay<Args...>::type>::type(
+                                                        res.exception()));
+                                    } else {
+                                        inner_fut = func(res.template get<Args>()...);
+                                    }
+                                }
+                                catch (const std::exception &exp) {
+                                    (void) exp;
+                                    Promise<FuncReturnType> inner_promise;
+                                    inner_fut = std::move(inner_promise.get_future());
+                                    inner_promise.set_exception(std::current_exception());
+                                }
+
+                                if (!inner_fut.valid()) { return; }
+                                std::unique_lock<std::mutex> lck(inner_fut.m_shared_state->m_then_lck);
+                                if (inner_fut.m_shared_state->m_status == FutureStatus::Timeout) {}
+                                else {
+                                    inner_fut.set_callback(
+                                            [prom](typename TryWrapper<FuncReturnType>::type &&t) mutable {
+                                                prom.set_value(std::move(t));
+                                            });
+                                    if (inner_fut.m_shared_state->m_status == FutureStatus::Done) {
+                                        try {
+                                            inner_fut.m_shared_state->m_then(
+                                                    std::move(inner_fut.m_shared_state->m_value));
+                                        }
+                                        catch (const std::exception &exp) {
+                                            (void) exp;
+                                            typename TryWrapper<FuncReturnType>::type t(std::current_exception());
+                                            inner_fut.m_shared_state->m_then(
+                                                    std::move(t));
+                                        }
+                                    }
+                                }
+
+                            };
+                            cb();
+                        });
+                if (m_shared_state->m_status == FutureStatus::Done) {
+                    if (m_shared_state->m_then) {
+                        try {
+                            m_shared_state->m_then(std::move(m_shared_state->m_value));
+                        }
+                        catch (const std::exception &exp) {
+                            (void) exp;
+                            typename TryWrapper<T>::type t(std::current_exception());
+                            m_shared_state->m_then(std::move(t));
+                        }
+                    }
+                }
+
+            }
+
+            return next_fut;
+        }
+
+
         void set_callback(
-                std::function<void(typename TryWrapper<T>::type &&)> &&func) {
+                std::function<void(typename TryWrapper<T>::type &&)>
+                &&func) {
             if (!m_shared_state->m_then) {
                 m_shared_state->m_then = std::move(func);
             }
@@ -146,30 +183,37 @@ namespace czh {
         std::shared_ptr<SharedState<T>> m_shared_state;
     };
 
-// 此场景需要类型退化！防止T实例化为&类型 try 中含有T 类型的成员变量(T &
-// m_value)！
+// 此场景需要类型退化！防止T实例化为&类型,导致 try中含有T类型的成员变量(T m_value)，无法实例化m_value！
     template<typename T>
-    Future<std::decay_t<T>> MakeReadyFuture(T &&value) {
+    inline Future<std::decay_t<T>> MakeReadyFuture(T &&value) {
         Promise<std::decay_t<T>> prom;
         prom.set_value(std::forward<T>(value));
         return prom.get_future();
     };
 
-    Future<void> MakeReadyFuture() {
+//    编译无法通过
+//    template<typename T>
+//    Future<T> MakeReadyFuture(T &&value) {
+//        Promise<T> prom;
+//        prom.set_value(std::forward<T>(value));
+//        return prom.get_future();
+//    };
+
+    inline Future<void> MakeReadyFuture() {
         Promise<void> prom;
         prom.set_value();
         return prom.get_future();
     }
 
     template<typename T, typename E>
-    Future<T> MakeExceptionFuture(E &&exp) {
+    inline Future<T> MakeExceptionFuture(E &&exp) {
         Promise<T> prom;
         prom.set_exception(std::make_exception_ptr(std::forward<E>(exp)));
         return prom.get_future();
     }
 
     template<typename T>
-    Future<T> MakeExceptionFuture(std::exception_ptr &&exp_ptr) {
+    inline Future<T> MakeExceptionFuture(std::exception_ptr &&exp_ptr) {
         Promise<T> prom;
         prom.set_exception(std::move(exp_ptr));
         return prom.get_future();
