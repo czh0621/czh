@@ -1,6 +1,7 @@
-#include "../../src/threadpool/threadpool.h"
+//#include "../../src/threadpool/threadpool.h"
 
-//#include "threadpool.h" //简写形式 需要cmake中指定头文件搜索路径
+#include "threadpool.h" //简写形式 需要cmake中指定头文件搜索路径
+
 int add(int x, int y) {
     return x + y;
 }
@@ -29,7 +30,6 @@ void test_join() {
 
 void test_move_thread() {
     std::thread t([]() { std::cout << 11 << std::endl; });
-
     // std::thread t2(t);
     std::thread t2(std::move(t));
 }
