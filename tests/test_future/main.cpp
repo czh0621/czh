@@ -110,62 +110,67 @@ void test_promise() {
 //
 
 void test_future_then() {
-    Promise<int> p;
-    auto f = p.get_future();
-    int x = 5;
-    const int &y = x;
-    std::thread t([p, &y]() mutable {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        p.set_value(y);
-    });
-    t.detach();
-    f.then([](Try<int> &&t) {
-                if (t.has_exception()) {
-                    auto exp = t.get_exception();
-                    std::cout << "future then excute exception:" << exp << std::endl;
-                } else if (t.has_value()) {
-                    std::cout << "future then excute value:" << t.value() << std::endl;
-                }
-            })
-            .then([](Try<void> &&t) {
-                std::cout << "future then excute void" << std::endl;
-            })
-            .then([]() { std::cout << "future then excute void2" << std::endl; });
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+//    Promise<int> p;
+//    auto f = p.get_future();
+//    int x = 5;
+//    const int &y = x;
+//    std::thread t([p, &y]() mutable {
+//        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+//        p.set_value(y);
+//    });
+//    t.detach();
+//    f.then([](Try<int> &&t) {
+//                if (t.has_exception()) {
+//                    auto exp = t.get_exception();
+//                    std::cout << "future then excute exception:" << exp << std::endl;
+//                } else if (t.has_value()) {
+//                    std::cout << "future then excute value:" << t.value() << std::endl;
+//                }
+//            })
+//            .then([](Try<void> &&t) {
+//                std::cout << "future then excute void" << std::endl;
+//            })
+//            .then([]() { std::cout << "future then excute void2" << std::endl; });
+//    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
 
     Promise<int> prom;
+    Promise<void> inner_prom;
+    auto cb = []() { std::cout << "cb" << std::endl; };
     auto fut = prom.get_future();
-    auto res = fut.then([](Try<int> &&t) {
+    auto res = fut.then([inner_prom](Try<int> &&t) {
         if (t.has_exception()) {
             auto exp = t.get_exception();
             std::cout << "future then excute exception:" << exp << std::endl;
         } else if (t.has_value()) {
             std::cout << "future then excute value:" << t.value() << std::endl;
         }
-    }).then([](Try<void> &&t) {
+    }).then([inner_prom, cb](Try<void> &&t) mutable {
         if (t.has_value()) {
             std::cout << "future then excute void" << std::endl;
         }
 //        auto fut2 = MakeReadyFuture();
 //        return fut2;
-        Promise<void> inner_prom;
-        inner_prom.set_value();
-        return inner_prom.get_future();
+        auto fut_inner = inner_prom.get_future();
+        auto res = fut_inner.then([](Try<void> &&t) { std::cout << "fut_inner done!" << std::endl; }).then(cb);
+        return res;
     }).then([]() {
         std::cout << "future then excute future<void>" << std::endl;
-    });
-    std::thread t2([prom]() mutable {
+    }).then(cb);
+    std::thread t2([prom, inner_prom]() mutable {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         prom.set_value(10);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        inner_prom.set_value();
     });
     t2.detach();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void test_ready_future() {
     int x = 5;
     auto fut_value = MakeReadyFuture(x);
+    fut_value.then([](Try<int> &&i) {});
     auto fut_void = MakeReadyFuture();
 }
 
@@ -200,11 +205,10 @@ int main() {
     // test_invoke_try();
     // test_promise();
     // test_deduce();
-    //test_future_then();
+    test_future_then();
     //test_set_value();
     //test_ready_future();
 
-
-    test_exception();
+    //test_exception();
     return 0;
 }

@@ -13,10 +13,11 @@
 #include <memory>
 #include <exception>
 #include <atomic>
+#include "../future/future.h"
 
 namespace czh {
     namespace core {
-        class threadpool {
+        class ThreadPool {
         private:
             // thread_local static bool m_working;
             bool m_stop;
@@ -43,9 +44,9 @@ namespace czh {
             int get_task_size();
 
         public:
-            explicit threadpool(size_t pool_size = std::thread::hardware_concurrency());
+            explicit ThreadPool(size_t pool_size = std::thread::hardware_concurrency());
 
-            ~threadpool() {
+            ~ThreadPool() {
                 recycle();
             };
 
@@ -58,7 +59,7 @@ namespace czh {
 
                 /*  std::packaged_task<return_type()> task(std::bind(std::forward<F>(f), std::forward<Args>(args)...)); */
                 if (m_stop) {
-                    throw std::runtime_error("threadpool stop do not enqueue task!");
+                    throw std::runtime_error("ThreadPool stop do not enqueue task!");
                 }
                 std::unique_lock<std::mutex> lck(m_mutex);
                 if (need_add_thread()) {
@@ -71,6 +72,28 @@ namespace czh {
 
                 m_condition_variable.notify_one();
                 return task->get_future();
+            }
+
+            template<typename F, typename...Args>
+            auto add(F &&f, Args &&... args) -> typename
+            czh::Future<std::result_of_t<F(Args...)>> {
+                using ReturnType = typename std::result_of_t<F(Args...)>;
+                Promise<ReturnType> promise;
+                auto fut = promise.get_future();
+                auto task = [prom = std::move(promise), func = std::forward<F>(f)](Args &&... args) mutable {
+                    auto res = func(std::forward<Args>(args)...);
+                    prom.set_value(res);
+                };
+                if (m_stop) {
+                    throw std::runtime_error("ThreadPool stop do not enqueue task!");
+                }
+                std::unique_lock<std::mutex> lck(m_mutex);
+                if (need_add_thread()) {
+                    add_thread();
+                }
+                m_task_deque.push_back(task);
+                m_condition_variable.notify_one();
+                return fut;
             }
         };
     }
