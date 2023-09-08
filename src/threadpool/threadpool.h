@@ -15,8 +15,11 @@
 #include <atomic>
 #include "../future/future.h"
 
+//优化 http://www.chunel.cn/archives/cgraph-threadpool-3-introduce
+//MT 1.监听线程（自动扩容与回收）2.批量拉取task 3.切片任务，将任务放入不同的任务队列，每个线程各自处理自己的任务队列 4 任务偷取（限定范围偷取）
 namespace czh {
     namespace core {
+
         class ThreadPool {
         private:
             // thread_local static bool m_working;
@@ -30,6 +33,7 @@ namespace czh {
             std::condition_variable m_condition_variable;
 
         private:
+
             bool need_add_thread();
 
             void add_thread();
@@ -44,6 +48,7 @@ namespace czh {
             int get_task_size();
 
         public:
+
             explicit ThreadPool(size_t pool_size = std::thread::hardware_concurrency());
 
             ~ThreadPool() {

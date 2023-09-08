@@ -138,7 +138,7 @@ void test_future_then() {
     Promise<void> inner_prom;
     auto cb = []() { std::cout << "cb" << std::endl; };
     auto fut = prom.get_future();
-    auto res = fut.then([inner_prom](Try<int> &&t) {
+    auto next_res = fut.then([inner_prom](Try<int> &&t) {
         if (t.has_exception()) {
             auto exp = t.get_exception();
             std::cout << "future then excute exception:" << exp << std::endl;
@@ -164,7 +164,6 @@ void test_future_then() {
         inner_prom.set_value();
     });
     t2.detach();
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void test_ready_future() {
@@ -206,6 +205,8 @@ int main() {
     // test_promise();
     // test_deduce();
     test_future_then();
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
     //test_set_value();
     //test_ready_future();
 
