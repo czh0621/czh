@@ -24,9 +24,11 @@ void test_reflect()
             google::protobuf::MessageFactory::generated_factory()->GetPrototype(descriptor);
         if (prototype) {
             auto instance = prototype->New();
-            spdlog::info("Message type name:{},Message instance:{}",
-                         descriptor->full_name(),
-                         instance->GetTypeName());
+            spdlog::info(
+                "Message descriptor full_name:{},descriptor name:{},Message instance typename:{}",
+                descriptor->full_name(),
+                descriptor->name(),
+                instance->GetTypeName());
             const auto* des       = instance->GetDescriptor();
             const auto* ref       = instance->GetReflection();
             auto*       field_des = des->FindFieldByName(field_name);
@@ -68,6 +70,7 @@ struct traits
     using bare_type = std::tuple<std::remove_const_t<std::remove_reference_t<T>>>;
 };
 
+
 void test_pb_value()
 {
     tutorial::Person person;
@@ -83,14 +86,18 @@ void test_pb_value()
         spdlog::info("person has name:{}", person.name());
     }
     else {
-        spdlog::info("person has defualt name");
+        spdlog::info("person has default name");
+    }
+    tutorial::Test test;
+    if (test.has_price()) {
+        spdlog::info("Test has price:{}", test.has_price());
     }
 }
 
 
 int main()
 {
-    test_reflect();
+    //    test_reflect();
     test_pb_value();
     return 0;
 }

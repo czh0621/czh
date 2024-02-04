@@ -149,6 +149,10 @@ public:
 };
 
 
+class ObjectA
+{};
+
+
 
 
 #endif   // CZH_CLASS_H_

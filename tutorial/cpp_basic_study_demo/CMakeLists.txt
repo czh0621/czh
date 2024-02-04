@@ -47,6 +47,13 @@ target_include_directories(s_test_proto PUBLIC ${PROTO_INCLUDE_PATH})
 
 target_link_libraries(s_test_proto PUBLIC test_proto protobuf spdlog::spdlog)
 
+
+aux_source_directory(test_memory test_memory)
+
+add_executable(s_test_memory ${test_memory})
+
+target_link_libraries(s_test_memory spdlog::spdlog)
+
 #
 aux_source_directory(test_stl test_stl)
 

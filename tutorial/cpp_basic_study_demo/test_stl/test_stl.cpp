@@ -9,6 +9,7 @@
 #include <map>
 #include <queue>
 #include <spdlog/spdlog.h>
+#include <thread>
 #include <type_traits>
 #include <unordered_set>
 #include <vector>
@@ -200,6 +201,80 @@ void test_priority_queue()
     std::cout << std::endl;
 }
 
+class NoCopyObject
+{
+public:
+    NoCopyObject()                        = default;
+    NoCopyObject(const NoCopyObject& obj) = delete;
+    NoCopyObject(NoCopyObject&& obj) noexcept { spdlog::info("call move NoCopyObject"); }
+};
+
+class NoMoveObject
+{
+public:
+    NoMoveObject() = default;
+    NoMoveObject(const NoMoveObject& obj) { spdlog::info("call copy NoMoveObject"); }
+    //    NoMoveObject(NoMoveObject&& obj) = delete;
+};
+
+class Object
+{
+public:
+    Object() = default;
+    Object(const Object& obj) { spdlog::info("call copy Object"); }
+    Object(Object&& obj) noexcept { spdlog::info("call move Object"); }
+};
+
+
+
+void test_vector()
+{
+    std::vector<NoCopyObject> v1;
+    std::vector<Object>       v2;
+    std::vector<NoMoveObject> v3;
+    NoCopyObject              c_obj1;
+    Object                    obj1;
+    NoMoveObject              m_obj1;
+
+
+    //    spdlog::info("push_back -------- left value ");
+    //    // left value
+    //    //    v1.push_back(c_obj1);   // should call copy but delete copy
+    //    v2.push_back(obj1);
+    //    v3.push_back(m_obj1);
+    //
+    //    spdlog::info("emplace_back -------- left value ");
+    //    //     v1.emplace_back(c_obj1);   // should call copy but delete copy
+    //    v2.emplace_back(obj1);   // 1th copy ->  2th move ----- if Object(Object&& obj) is not
+    //    noexcept
+    //                             // call copy else call move
+    //    v3.emplace_back(m_obj1);   // 1th copy ->  2th must be copy -----because
+    //                               // NoMoveObject(NoMoveObject&& obj) = delete;
+
+
+    // right value
+    spdlog::info("push_back -------- right value");
+    //    NoCopyObject&& n_tmp = NoCopyObject();
+    //    auto           value = std::is_same<decltype(n_tmp), NoCopyObject&&>::value;
+    //    v1.push_back(std::move(n_tmp));   // 直接调用push_back右值引用函数 only call move
+    //    spdlog::info("n_tmp type is NoCopyObject&&:{}", value);
+    v1.push_back(NoCopyObject());   // 直接调用push_back右值引用函数 only call move
+                                    //    Object&& tmp = Object();
+    //    value        = std::is_same<decltype(tmp), Object&&>::value;
+    //    spdlog::info("tmp type is Object&&:{}", value);
+    v2.push_back(Object());
+    //    NoMoveObject&& m_tmp = NoMoveObject();
+    //    value                = std::is_same<decltype(m_tmp), NoMoveObject&&>::value;
+    //    spdlog::info("m_tmp type is NoMoveObject&&:{}", value);
+    //    v3.push_back(std::move(m_tmp));
+    v3.push_back(NoMoveObject());
+
+    //    spdlog::info("emplace_back -------- right value");
+    //    v1.emplace_back(NoCopyObject());
+    //    v2.emplace_back(std::move(obj1));
+    //    v3.emplace_back(std::move(m_obj1));
+}
+
 
 int main()
 {
@@ -207,7 +282,9 @@ int main()
     //    test_object_cmp();
     //    test_object_func_cmp();
 
-    test_unordered_set();
+    //    test_unordered_set();
+    //
+    //    test_priority_queue();
 
-    test_priority_queue();
+    test_vector();
 }

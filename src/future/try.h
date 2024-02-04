@@ -57,7 +57,7 @@ public:
         : m_state(State::Value)
         , m_value(t)
     {
-        std::cout << "const T &t" << std::endl;
+        //        std::cout << "const T &t" << std::endl;
     }
 
     // 此处不能显示实例化void 没有void&的写法，因此需要模板特化void版本
@@ -65,7 +65,7 @@ public:
         : m_state(State::Value)
         , m_value(std::move(t))
     {
-        std::cout << "T&&" << std::endl;
+        //        std::cout << "T&&" << std::endl;
     }
 
     explicit Try(std::exception_ptr&& e)

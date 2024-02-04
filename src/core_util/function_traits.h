@@ -36,7 +36,8 @@ struct FunctionTraits<Ret()>
     // sizeof...(Args) 的计算，因为它只计算非 void 类型的数量
     static constexpr auto size = 0;
     using return_type          = Ret;
-    // std::tuple<> 为空元组  std::tuple<void> 为存储void的元组（void 没有实际的值）
+    // std::tuple<> 为空元组  std::tuple<void> 为存储void的元组（void
+    //     没有实际的值）且std::tuple<void> 无法实例化
     using tuple_type      = std::tuple<>;
     using bare_tuple_type = std::tuple<>;
 };

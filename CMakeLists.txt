@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.4.1)
 
 option(BUILD_TUTORIAL "WHERE BUILD TEST" true)
+option(BUILD_Optimization "WHERE BUILD USE Optimization " false)
 
 project(czh)
 
@@ -8,7 +9,10 @@ project(czh)
 message(STATUS "work_dir = ${PROJECT_SOURCE_DIR} build_dir = ${PROJECT_BINARY_DIR}")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -g -pthread ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -Wall -fsanitize=leak -g")
+if (BUILD_Optimization)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+endif ()
 
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/future future_src)

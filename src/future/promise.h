@@ -23,6 +23,7 @@ public:
         : m_shared_state(std::make_shared<SharedState<T>>())
     {}
 
+    // 默认使用浅拷贝 因为是智能指针 裸指针需要使用深copy
     Promise(const Promise&) = default;
 
     Promise(Promise&&) = default;

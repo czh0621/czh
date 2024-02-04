@@ -9,6 +9,7 @@
 #define CZH_FUNCTION_ROUTER_H_
 #include "function_traits.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_map>
 // 函数反射
@@ -31,9 +32,12 @@ namespace czh { namespace core {
             if (check_duplicate(method_name)) {
                 return false;
             }
+
+            // 下面两种方法等同
             m_router_map.emplace(
                 method_name,
                 std::bind(&invoker<F>::apply, f, std::placeholders::_1, std::placeholders::_2));
+
             //            m_router_map[method_name] = {
             //                std::bind(&invoker<F>::apply, f, std::placeholders::_1,
             //                std::placeholders::_2)};
@@ -47,12 +51,14 @@ namespace czh { namespace core {
             if (check_duplicate(method_name)) {
                 return false;
             }
+            // 函数模板调用 可key word:template
             m_router_map.emplace(method_name,
                                  std::bind(&invoker<F>::template apply_member<Self>,
                                            f,
                                            self,
                                            std::placeholders::_1,
                                            std::placeholders::_2));
+
             //            m_router_map[method_name] = {
             //                std::bind(&invoker<F>::apply, f, std::placeholders::_1,
             //                std::placeholders::_2)};
@@ -80,17 +86,22 @@ namespace czh { namespace core {
             if (it == m_router_map.end()) {
                 return false;
             }
-            //            auto param_tuple = std::forward_as_tuple<Args...>(args...);
 
             //  std::tuple<Args...>(args) 会将整个args对象作为作为一个参数传给tuple
             //  而std::tuple<Args...>(args...) 会将参数展开列表 匹配模板参数包
 
             // 若不退化则参数构造函数有问题,std::tuple<int, double&>::tuple()
-            //            auto param_tuple = std::tuple<Args...>(args...);
+            // 实际上是没有匹配的构造函数
+            auto param_tuple_2 = std::tuple<Args...>(args...);
+
+            //            auto param_tuple_1 = std::forward_as_tuple<Args...>(args...);
             //            与下面的区别就是是否退化（查看std::make_tuple实现）
             auto param_tuple = std::make_tuple(std::forward<Args>(args)...);
+
+            spdlog::info("param_tuple：{},param_tuple_2:{}",
+                         typeid(param_tuple).name(),
+                         typeid(param_tuple_2).name());
             using tuple_type = decltype(param_tuple);
-            std::cout << "----," << typeid(tuple_type).name() << "," << std::endl;
             using storage_tuple =
                 typename std::aligned_storage<sizeof(tuple_type), alignof(tuple_type)>::type;
             storage_tuple tuple_data;
@@ -106,7 +117,7 @@ namespace czh { namespace core {
         {
             auto it = get_iterator(method_name);
 
-            return it == m_router_map.end() ? false : true;
+            return !(it == m_router_map.end());
         }
 
         template<typename Fn>
@@ -116,7 +127,13 @@ namespace czh { namespace core {
             // wrapper 统一调用形式
             static inline void apply(const Fn& f, void* result, void* param)
             {
-                using tuple_type     = typename FunctionTraits<Fn>::bare_tuple_type;
+                using tuple_type = typename FunctionTraits<Fn>::bare_tuple_type;
+
+                // 调试使用
+                //                 using tuple_type_orgin = typename FunctionTraits<Fn>::tuple_type;
+                //                 spdlog::info("bare_tuple_type:{} tuple_type:{}",
+                //                              typeid(tuple_type).name(),
+                //                              typeid(tuple_type_orgin).name());
                 const tuple_type* tp = static_cast<tuple_type*>(param);
                 call(f, *tp, result);
             }

@@ -15,6 +15,8 @@ template<typename T>
 class Future
 {
 public:
+    using InnerType = T;
+
     Future() = default;
 
     explicit Future(std::shared_ptr<SharedState<T>> ptr)
@@ -194,7 +196,7 @@ private:
 // 此场景需要类型退化！防止T实例化为&类型,导致 try中含有T类型的成员变量(T
 // m_value)，无法实例化m_value！
 template<typename T2>
-inline Future<std::decay_t<T2>> MakeReadyFuture(T2&& value)
+inline Future<std::decay_t<T2>> make_ready_future(T2&& value)
 {
     Promise<std::decay_t<T2>> prom;
     prom.set_value(std::forward<T2>(value));
@@ -203,13 +205,13 @@ inline Future<std::decay_t<T2>> MakeReadyFuture(T2&& value)
 
 //    编译无法通过
 //    template<typename T>
-//    Future<T> MakeReadyFuture(T &&value) {
+//    Future<T> make_ready_future(T &&value) {
 //        Promise<T> prom;
 //        prom.set_value(std::forward<T>(value));
 //        return prom.get_future();
 //    };
 
-inline Future<void> MakeReadyFuture()
+inline Future<void> make_ready_future()
 {
     Promise<void> prom;
     prom.set_value();
@@ -217,7 +219,7 @@ inline Future<void> MakeReadyFuture()
 }
 
 template<typename T2, typename E>
-inline Future<T2> MakeExceptionFuture(E&& exp)
+inline Future<T2> make_exception_future(E&& exp)
 {
     Promise<T2> prom;
     prom.set_exception(std::make_exception_ptr(std::forward<E>(exp)));
@@ -225,7 +227,7 @@ inline Future<T2> MakeExceptionFuture(E&& exp)
 }
 
 template<typename T2>
-inline Future<T2> MakeExceptionFuture(std::exception_ptr&& exp_ptr)
+inline Future<T2> make_exception_future(std::exception_ptr&& exp_ptr)
 {
     Promise<T2> prom;
     prom.set_exception(std::move(exp_ptr));
