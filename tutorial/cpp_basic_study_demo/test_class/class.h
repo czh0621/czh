@@ -152,6 +152,87 @@ public:
 class ObjectA
 {};
 
+class Base_b
+{
+public:
+    int publicMember;
+
+protected:
+    int protectedMember;
+
+private:
+    int privateMember;
+};
+
+class Derived_d : public Base_b
+{
+public:
+    void accessBaseMembers()
+    {
+        publicMember    = 42;   // 子类可以访问基类的公有成员
+        protectedMember = 42;   // 子类可以访问基类的保护成员
+        //        privateMember   = 42;子类不能直接访问基类的私有成员
+    }
+};
+
+#include <iostream>
+
+class MyClass
+{
+public:
+    // 默认构造函数
+    MyClass()
+        : data(0)
+    {
+        std::cout << "Default constructor" << std::endl;
+    }
+
+    // 析构函数
+    ~MyClass() { std::cout << "Destructor" << std::endl; }
+
+    // 拷贝构造函数
+    // 这里通常采用const + & 的格式。因为函数传参分为值传参（会copy）和地址传参（不会copy）
+    // A(const A& obj) //拷贝构造函数 加引用这样可以避免在函数调用时对实参的一次拷贝，提高了效率。
+    // 加const 不希望修改，防止使用别人的，修改了别人的东西。
+    MyClass(const MyClass& other)
+        : data(other.data)
+    {
+        std::cout << "Copy constructor" << std::endl;
+    }
+
+    // 移动构造函数
+    MyClass(MyClass&& other) noexcept
+        : data(std::move(other.data))
+    {
+        std::cout << "Move constructor" << std::endl;
+    }
+
+    // 拷贝赋值操作符
+    MyClass& operator=(const MyClass& other)
+    {
+        std::cout << "Copy assignment operator" << std::endl;
+        if (this != &other) {
+            data = other.data;
+        }
+        return *this;
+    }
+
+    // 移动赋值操作符
+    MyClass& operator=(MyClass&& other) noexcept
+    {
+        std::cout << "Move assignment operator" << std::endl;
+        if (this != &other) {
+            data = std::move(other.data);
+        }
+        return *this;
+    }
+
+private:
+    int data;
+};
+
+
+
 
 
 

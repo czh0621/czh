@@ -118,30 +118,20 @@ void test_class_constructor()
     //    b.T_func1();
 }
 
-class Base_b
+
+void test_class_special_mem_func()
 {
-public:
-    int publicMember;
-
-protected:
-    int protectedMember;
-
-private:
-    int privateMember;
-};
-
-class Derived_d : public Base_b
-{
-public:
-    void accessBaseMembers()
-    {
-        publicMember    = 42;   // 子类可以访问基类的公有成员
-        protectedMember = 42;   // 子类可以访问基类的保护成员
-        //        privateMember   = 42;子类不能直接访问基类的私有成员
-    }
-};
-
-
+    MyClass obj1;                    // 调用默认构造函数
+    MyClass obj2(obj1);              // 调用拷贝构造函数
+    MyClass obj3(std::move(obj1));   // 调用移动构造函数
+    MyClass obj4;
+    obj4 = obj2;   // 调用拷贝赋值操作符
+    MyClass obj5;
+    obj5         = std::move(obj2);   // 调用移动赋值操作符
+    MyClass obj6 = obj1;              // 调用拷贝构造函数
+    MyClass obj7;                     // 调用默认构造函数
+    MyClass obj8 = std::move(obj7);   // 调用移动构造函数
+}
 
 
 
@@ -152,6 +142,8 @@ int main()
 
     //    test_multi_public();
 
-    test_class_constructor();
+    //    test_class_constructor();
+
+    test_class_special_mem_func();
     return 0;
 }
