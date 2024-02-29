@@ -275,6 +275,10 @@ void test_vector()
     //    v3.emplace_back(std::move(m_obj1));
 }
 
+{
+    std::array
+}
+
 
 int main()
 {

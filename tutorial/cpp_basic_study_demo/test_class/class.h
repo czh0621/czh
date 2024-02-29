@@ -7,7 +7,11 @@
 
 #ifndef CZH_CLASS_H_
 #define CZH_CLASS_H_
+#include <iostream>
 #include <spdlog/spdlog.h>
+#include <string>
+
+using namespace std;
 class EmptyClass
 {};
 
@@ -32,49 +36,16 @@ class alignas(8) VirtualClassAlignas
     int32_t m_i;
 };
 
-class Base
-{
-public:
-    virtual void print() { spdlog::info("call Base print func"); }
-
-    void common() { spdlog::info("call Base common func"); }
-
-    void f1() { spdlog::info("call Base f1 func"); }
-
-    virtual void override() { spdlog::info("call Base override func"); }
-
-    void redefine() { spdlog::info("call Base redefine func"); }
-
-
-private:
-    int m_base = 1;
-};
-
-class Derived : public Base
-{
-public:
-    virtual void print() { spdlog::info("call Derived print func"); }
-
-    void f2() { spdlog::info("call Derived f2 func"); }
-
-    virtual void override() override { spdlog::info("call Derived override func"); }
-
-    void redefine() { spdlog::info("call Derived redefine func"); }
-
-    void redefine(int t) { spdlog::info("call Derived redefine func with param"); }
-
-
-private:
-    int m_derived  = 2;   // 8+vptr(8) =16
-    int m_derived1 = 2;   // 12+vptr(8) 对齐后为24
-};
-
 class BaseA
 {
 public:
-    virtual void funcA() { spdlog::info("call BaseA funcA"); }
+    virtual void funcA() { spdlog::info("call virtual BaseA funcA"); }
 
-    virtual void common1() { spdlog::info("call BaseA common1"); };
+    virtual void commonA() { spdlog::info("call virtual BaseA commonA"); };
+
+    void common_func() { spdlog::info("call  BaseA common_func"); }
+
+    void func() { spdlog::info("call  BaseA func"); }
 
     int m_BaseA;
 };
@@ -82,9 +53,11 @@ public:
 class BaseB
 {
 public:
-    virtual void funcB() { spdlog::info("call BaseB funcB"); }
+    virtual void funcB() { spdlog::info("call virtual BaseB funcB"); }
 
-    virtual void common2() { spdlog::info("call BaseB common2"); };
+    virtual void commonB() { spdlog::info("call virtual BaseB commonB"); };
+
+    void func2() { spdlog::info("call  BaseB func2"); }
 
     int m_BaseB;
 };
@@ -92,9 +65,11 @@ public:
 class Derived2 : public BaseA, public BaseB
 {
 public:
-    virtual void funcA() override { spdlog::info("call Derived2 funcA"); }
+    virtual void funcA() override { spdlog::info("call override Derived2 funcA"); }
 
-    virtual void funcB() override { spdlog::info("call Derived2 funcB"); }
+    virtual void funcB() override { spdlog::info("call override Derived2 funcB"); }
+
+    void func() { spdlog::info("call  Derived2 func"); }
 
     int m_Derived2;
 };
@@ -175,14 +150,57 @@ public:
     }
 };
 
-#include <iostream>
+
+class ClassA
+{
+public:
+    ClassA() { cout << "ClassA::ClassA()" << endl; }
+    virtual ~ClassA() { cout << "ClassA::~ClassA()" << endl; }
+
+    void func1() { cout << "ClassA::func1()" << endl; }
+    void func2() { cout << "ClassA::func2()" << endl; }
+
+    virtual void vfunc1() { cout << "ClassA::vfunc1()" << endl; }
+    virtual void vfunc2() { cout << "ClassA::vfunc2()" << endl; }
+
+private:
+    int aData;
+};
+
+class ClassB : public ClassA
+{
+public:
+    ClassB() { cout << "ClassB::ClassB()" << endl; }
+    virtual ~ClassB() { cout << "ClassB::~ClassB()" << endl; }
+
+    void         func1() { cout << "ClassB::func1()" << endl; }
+    virtual void vfunc1() { cout << "ClassB::vfunc1()" << endl; }
+
+private:
+    int bData;
+};
+
+class ClassC : public ClassB
+{
+public:
+    ClassC() { cout << "ClassC::ClassC()" << endl; }
+    virtual ~ClassC() { cout << "ClassC::~ClassC()" << endl; }
+
+    void         func2() { cout << "ClassC::func2()" << endl; }
+    virtual void vfunc2() { cout << "ClassC::vfunc2()" << endl; }
+
+private:
+    int cData;
+};
+
+
 
 class MyClass
 {
 public:
     // 默认构造函数
     MyClass()
-        : data(0)
+        : data("MyClass member")
     {
         std::cout << "Default constructor" << std::endl;
     }
@@ -227,8 +245,10 @@ public:
         return *this;
     }
 
+    std::string get_value() { return data; }
+
 private:
-    int data;
+    std::string data;
 };
 
 

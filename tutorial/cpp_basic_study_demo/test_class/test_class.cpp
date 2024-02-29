@@ -8,43 +8,9 @@
 void test_class_memory()
 {
     spdlog::info("empty class memory size:{}", sizeof(EmptyClass));
-    spdlog::info("virtual class memory size:{}", sizeof(VirtualClass));
+    spdlog::info("virtual class memory size:{} int* size:{}", sizeof(VirtualClass), sizeof(int*));
     spdlog::info("common class memory size:{}", sizeof(CommonClass));
     spdlog::info("VirtualClassAlignas class memory size:{}", sizeof(VirtualClassAlignas));
-}
-void test_class_func()
-{
-    Derived d;
-    Base    b;
-    Base*   ptr = &d;
-    spdlog::info("Derived address:{}", (int64_t)&d);
-    spdlog::info("Base size:{} Derived size:{}", sizeof(Base), sizeof(Derived));
-    auto p = (char*)&d + 8;
-    int* t = reinterpret_cast<int*>(p);
-    spdlog::info("Derived +8 {}", *t);   // 虚函数的地址
-    int offset = (char*)&d - (char*)ptr;
-    spdlog::info("Offset {}", offset);
-    spdlog::info("test ptr->Base ---------------------");
-    ptr = &b;
-    ptr->print();
-    ptr->common();
-    ptr->f1();
-    // ptr->f2();//编译不过 ‘class Base’ has no member named ‘f2’
-    ptr->override();
-    ptr->redefine();
-
-    spdlog::info("test ptr->derived ---------------------");
-    ptr = &d;
-    ptr->print();
-    ptr->common();
-    ptr->f1();
-    // ptr->f2();//编译不过 ‘class Base’ has no member named ‘f2’
-    ptr->override();
-    ptr->redefine();
-    auto ptr_derived = dynamic_cast<Derived*>(ptr);
-    ptr_derived->f2();
-    ptr_derived->redefine();
-    ptr_derived->redefine(1);
 }
 
 void test_multi_public()
@@ -52,57 +18,101 @@ void test_multi_public()
     Derived2 d;
     BaseA*   pA = &d;
     BaseB*   pB = &d;
+    spdlog::info("BaseA*(pointer to Derived2)--->Derived2*----------------------");
     {
         // 基类转子类，此处不涉及多态
         Derived2* pD = dynamic_cast<Derived2*>(pA);
         if (pD != nullptr) {
-            spdlog::info("pD ptr is not nullptr");
+            spdlog::info("pD ptr is not nullptr ");
+            // 以下都是子类common调用
             pD->funcA();
             pD->funcB();
+            pD->common_func();
+            pD->func();
+            pD->commonA();
+            pD->commonB();
         }
-        pD = (Derived2*)pA;
-        pD->funcA();
-        pD->funcB();
-        // 都是子类地址 调用子类函数
-        // 此时也走虚函数表（读取的时子类的虚函数表），只不过这里没有重写虚函数，调用的都是基类函数。
-        d.common1();
-        d.common2();
+        spdlog::info("----------------------");
+        {
+            // 以下都是子类common调用
+            auto* tmp = (Derived2*)pA;
+            tmp->funcA();
+            tmp->funcB();
+            tmp->common_func();
+            tmp->func();
+            tmp->commonA();
+            tmp->commonB();
+        }
+        spdlog::info("----------------------");
+        {
+            // 以下都是子类common调用
+            auto* tmp = (Derived2*)pB;
+            tmp->funcA();
+            tmp->funcB();
+            tmp->common_func();
+            tmp->func();
+            tmp->commonA();
+            tmp->commonB();
+        }
     }
-    spdlog::info("----------------------");
+    spdlog::info("BaseB*(pointer to Derived2)--->BaseA*----------------------");
     {
-        // 基类2转基类1，此处设计多态。
+        // 基类2转基类1，指针指向的还是子类对象 所以用的还是子类的虚函数表
         BaseA* pA1 =
             dynamic_cast<BaseA*>(pB);   // 此处dynamic_cast会调整vptr，将指向B类的vptr改为指向A类
         if (pA1 != nullptr) {
             spdlog::info("pA1 ptr is not nullptr");   // 调用A虚函数表的虚函数
-            pA1->funcA();                             // funcA 被重写
-            pA1->common1();                           // 没被重写
+            pA1->funcA();
+            // pA1->funcB(); error  A类 no funcB
+            pA1->common_func();
+            pA1->func();
+            pA1->commonA();
+            // pA1->commonB() error 同上
         }
-        pA1 = (BaseA*)pB;   // 此处不会调整vptr的指向 仍然指向B表
-        pA1->funcA();   // 此处语义上是调用funcA 但是由于vptr指向B表 回调用B表的中虚函数
-        pA1->common1();   // 同上
+        spdlog::info("----------------------");
+        {
+            pA1 = (BaseA*)pB;   // 此处不会调整vptr的指向 仍然指向B表
+            pA1->funcA();       // error call 居然 call override Derived2 funcB
+            // pA1->funcB(); error  A类 no funcB
+            pA1->common_func();
+            pA1->func();
+            pA1->commonA();   // error call  call virtual BaseB commonB
+            // pA1->commonB() error 同上
+        }
     }
-    spdlog::info("----------------------");
+    spdlog::info("BaseA*(pointer to Derived2)--->BaseB*----------------------");
     {
         BaseB* pB2 = dynamic_cast<BaseB*>(pA);   // 进行了地址偏移，pB2地址指向了BaseB部分地址
         if (pB2 != nullptr) {
             spdlog::info("dynamic_cast addr :{}", (int64_t)pB2);   // 140724103650080
+            // pB2->funcA();
             pB2->funcB();
-            // pB2->common2(); 编译不过！
+            // pB2->common_func();
+            // pB2->func();
+            // pB2->commonA();
+            pB2->commonB();
         }
-        pB2 = (BaseB*)
-            pA;   // PA
-                  // 原来指向的就是BaseA部分，进行强转过后，未进行偏移，此时指向的还是子类对象首地址
-        spdlog::info("普通转换 addr :{}", (int64_t)pB2);   // 调用A虚函数表的虚函数 140724103650064
+        spdlog::info("----------------------");
+        {
+            pB2 = (BaseB*)
+                pA;   // PA
+                      // 原来指向的就是BaseA部分，进行强转过后，未进行偏移，此时指向的还是子类对象首地址
+            spdlog::info("普通转换 addr :{}",
+                         (int64_t)pB2);   // 调用A虚函数表的虚函数 140724103650064
 
-        // 因此调用的都是BaseA内的虚函数表中的虚函数
-        pB2->funcB();     // Derived2::funcA()
-        pB2->common2();   // BaseA::common1()
+            // pB2->funcA();
+            pB2->funcB();
+            // pB2->common_func();
+            // pB2->func();
+            // pB2->commonA();
+            pB2->commonB();
+        }
+
 
         auto ptr = &d;
         spdlog::info("ptr addr :{}", (int64_t)ptr);   // 调用A虚函数表的虚函数
         ptr->funcB();
-        ptr->common2();
+        ptr->commonB();
     }
 }
 
@@ -127,23 +137,57 @@ void test_class_special_mem_func()
     MyClass obj4;
     obj4 = obj2;   // 调用拷贝赋值操作符
     MyClass obj5;
-    obj5         = std::move(obj2);   // 调用移动赋值操作符
-    MyClass obj6 = obj1;              // 调用拷贝构造函数
-    MyClass obj7;                     // 调用默认构造函数
-    MyClass obj8 = std::move(obj7);   // 调用移动构造函数
+    obj5         = std::move(obj2);                           // 调用移动赋值操作符
+    MyClass obj6 = obj1;                                      // 调用拷贝构造函数
+    MyClass obj7;                                             // 调用默认构造函数
+    MyClass obj8 = std::move(obj7);                           // 调用移动构造函数
+    spdlog::info("obj7 member_value:{}", obj7.get_value());   // empty string
 }
 
 
+void test_virtual_class()
+{
+    {
+        // 单继承调用
+        ClassA* a = new ClassB();
+        a->func1();   // "ClassA::func1()"   普通函数调用 指针类型决定
+        // 若A类注释掉void func1()
+        // a->func1();                  //class ClassA’ has no member named ‘func1‘
+        // 说明A类型的指针a只能操作属于基类的内存范围
+        a->func2();    // "ClassA::func2()"
+        a->vfunc1();   // "ClassB::vfunc1()"  B类的虚函数表重写了A类的vfunc1()
+        a->vfunc2();   // "ClassA::vfunc2()"  B类的虚函数表 未重写直接继承A类的虚函数
+    }
+
+
+
+    // 多次单继承调用
+    ClassA* a = new ClassC;
+    ////////因为是A类指针 不是虚函数 普通调用只访问A类的函数
+    a->func1();   // "ClassA::func1()"
+    a->func2();   // "ClassA::func2()"
+
+    a->vfunc1();   // "ClassB::vfunc1()"	C类的虚函数表未重写
+                   // ，这里继承的B类的虚函数表(但是B类的虚函数表重写了A类的vfunc1())
+    a->vfunc2();   // "ClassC::vfunc2()"    C类的虚函数表重写vfunc2
+
+    ClassB* b = new ClassC;
+    b->func1();   // "ClassB::func1()"	    普通调用 此时B类的func1 覆盖了A类的方法
+    b->func2();   // "ClassA::func2()"	    B类 func2直接继承的A类的方法
+    b->vfunc1();   // "ClassB::vfunc1()"	C类的虚函数表继承B类虚函数表 B类虚函数重写vfunc1
+    b->vfunc2();   // "ClassC::vfunc2()"	C类的虚函数表重写把vfunc2()
+}
 
 int main()
 {
-    //    test_class_memory();
-    //    test_class_func();
+    // test_class_memory();
 
-    //    test_multi_public();
+    //    test_virtual_class();
+
+    test_multi_public();
 
     //    test_class_constructor();
 
-    test_class_special_mem_func();
+    //    test_class_special_mem_func();
     return 0;
 }

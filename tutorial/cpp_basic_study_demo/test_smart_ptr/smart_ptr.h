@@ -35,13 +35,18 @@ public:
 
     virtual void call() { spdlog::info("this is base call"); }
 
+    void call_base_func() { spdlog::info("this is base call_base_func"); }
+
     std::string m_base{"base"};
 };
 
 class Base2
 {
 public:
-    std::string m_base2{"base2"};
+    virtual ~Base2() = default;
+    virtual void call() { spdlog::info("this is base2 call"); }
+    void         call_base2_func() { spdlog::info("this is base2 call_base2_func"); }
+    std::string  m_base2{"base2"};
 };
 
 class Derived : public Base, public Base2

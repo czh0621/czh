@@ -32,6 +32,7 @@ void test_return_ptr()
     std::shared_ptr<TestPtr> sptb = spt->get_shared_ptr();
     spdlog::info("当前资源被引用数:{}", sptb.use_count());   // 2
 }
+
 // 测试继承关系下的enable_shared_from_this
 void test_base_ptr()
 {
@@ -54,6 +55,23 @@ void test_base_ptr()
     auto                     convert_ptr2 = std::static_pointer_cast<Derived>(ptr);
     convert_ptr->call();   // Derived ptr  can ptr->m_base; also can ptr->m_derived
     convert_ptr2->call();
+
+    // 多继承指针转换
+    std::shared_ptr<Base2> base2_ptr = derived_ptr;   // 隐式转换 向上转换安全
+    base2_ptr->call_base2_func();
+    base2_ptr->call();   // derived call 虚函数
+
+    // Base -->Base2
+    auto convert_base2_ptr = std::dynamic_pointer_cast<Base2>(base_ptr);
+    convert_base2_ptr->call_base2_func();
+    // convert_base2_ptr->call_base_func(); // error Base2 no func call_base_func
+    convert_base2_ptr->call();   // derived call 虚函数表重写了
+
+    // Base2 -->Base
+    auto convert_base_ptr = std::dynamic_pointer_cast<Base>(base2_ptr);
+    // convert_base_ptr->call_base2_func(); // error Base2 no func call_base_func
+    convert_base_ptr->call_base_func();
+    convert_base2_ptr->call();   // derived call  虚函数表重写了
 }
 
 class BaseA
@@ -78,17 +96,118 @@ void test_convert_ptr()
 
 void test_unique_ptr()
 {
-    std::unique_ptr<int>                ptr = std::make_unique<int>(5);
+    std::unique_ptr<int>                ptr5 = std::make_unique<int>(5);
+    std::unique_ptr<int>                ptr6(new int(6));
     std::map<int, std::unique_ptr<int>> test_map;
     // copy delete only move
     // test_map[5] = ptr;
-    test_map.emplace(5, std::move(ptr));
-    test_map[5] = std::move(ptr);
+    test_map.emplace(5, std::move(ptr5));
+
+    test_map[6] = std::move(ptr6);
 
     // only move
     // auto u_ptr  = test_map[5];
-    auto u_ptr2 = std::move(test_map[5]);   // map 中5号索引存储的智能指针被掏空，置为默认值NULL
-    spdlog::info("map size:{}", test_map.size());   // print 1
+    auto u_ptr_move5 =
+        std::move(test_map[5]);   // map 中5号索引存储的智能指针被掏空，置为默认值NULL
+    spdlog::info("map size:{} ", test_map.size());   // print 2
+
+    // 断言为真 不打印！false 触发
+    assert(test_map[5] == nullptr &&
+           "test_map[5] has been moved, now test_map[5] should be nullptr,but not!");
+
+    // release 只是放弃控制权,返回裸指针,将智能指针置为nullptr
+    auto release_ret = u_ptr_move5.release();
+    bool value       = (u_ptr_move5 == nullptr);
+    spdlog::info("u_ptr_move5.release() return raw pointer:{} (u_ptr_move5 ==nullptr)value:{}",
+                 (void*)release_ret,
+                 value);   // print true
+
+    auto delete_wrapper = [](int* p) {
+        if (p) {
+            spdlog::info("call delete this object");
+            delete p;
+        }
+    };
+
+    // 自定义删除器 写在模板中
+    std::unique_ptr<int, decltype(delete_wrapper)> ptr(new int(1), delete_wrapper);
+
+    // 释放原来指向的对象，并指向新的对象
+    ptr.reset(test_map[6].release());
+
+    // 释放指向的对象,并设置内部对象指针为nullptr
+    ptr.reset();
+
+    assert(ptr == nullptr && "ptr should not nullptr");
+
+    // 直接转换shared_ptr
+    std::shared_ptr<int> p = std::make_unique<int>(0);
+}
+
+
+
+void test_shared_ptr()
+{
+    // std::shared_ptr<int> ptr0 = new int();   // error
+    std::shared_ptr<int> ptr1(new int(1));
+    std::shared_ptr<int> ptr2 = std::make_shared<int>(2);
+
+    auto delete_wrapper = [](int* p) {
+        if (p) {
+            spdlog::info("delete this object param p");
+            delete p;
+        }
+    };
+    std::shared_ptr<int> ptr3(new int(1), delete_wrapper);
+
+    ptr3 = ptr2;   // ptr3 指向 ptr2 object 即ptr3原来的memory 计数为0 call delete_wrapper
+
+    spdlog::info("ptr3 use_count:{} should be 2", ptr3.use_count());
+
+    auto delete_wrapper2 = [](int* ptr) {
+        if (ptr) {
+            spdlog::info("delete this object param ptr");
+            delete ptr;
+        }
+    };
+
+    // std::shared_ptr<int> ptr4(ptr_copy, delete_wrapper2); //error 参数应该为裸指针
+
+    std::shared_ptr<int> ptr5(ptr1);   // ptr5和ptr1 都指向同一对象 增加计数
+    spdlog::info("ptr5 use_count:{} should be 2", ptr5.use_count());
+
+    ptr3.reset();   // 减少计数
+    assert(ptr3 == nullptr && "ptr3 should not nullptr");
+    ptr5.reset(new int(5), delete_wrapper2);   // 减少原来的计数，增加指向新的memory计数
+
+    std::shared_ptr<int> ptr_tmp = std::make_shared<int>();
+    auto                 ptr_tmp2(ptr_tmp);
+
+    // reset 同一个裸指针 同样导致内存二次释放
+
+    //    ptr5.reset(ptr_tmp.get());
+    //    spdlog::info("ptr5 reset ptr_tmp use_count:{} ptr_tmp2 use_count:{}",
+    //                 ptr5.use_count(),
+    //                 ptr_tmp.use_count()); // print 1 2 同样导致内存二次释放
+    ptr5 = nullptr;   // 清空ptr5的引用计数,对象指针为nullptr
+
+
+    {
+        auto*                        p = new std::string("hello");
+        std::shared_ptr<std::string> sp1(p);
+        /*不要这样做！！*/
+        std::shared_ptr<std::string> sp2(p);   // error 二次释放
+    }
+    {
+        auto         sp = std::make_shared<std::string>("wechat:shouwangxiansheng");
+        std::string* p  = sp.get();
+        {
+            // error
+            // std::shared_ptr<std::string> sp2(p);/*不要这样做!!*/
+        }
+        // error
+        // delete p; /*不要这样做*/
+    }
 }
 
 
@@ -97,8 +216,14 @@ void test_unique_ptr()
 int main()
 {
     //    test_return_ptr();
-    //    test_base_ptr();
+
+    test_base_ptr();
+
+
     //    test_convert_ptr();
-    test_unique_ptr();
+
+    // test_unique_ptr();
+
+    //    test_shared_ptr();
     return 0;
 }
