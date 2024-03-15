@@ -252,6 +252,44 @@ private:
 };
 
 
+// 测试this
+class TestBaseThis;
+class Container
+{
+public:
+    std::vector<TestBaseThis*> m_vec;
+
+    TestBaseThis* get_ptr() { return m_vec[0]; }
+};
+
+
+class TestBaseThis
+{
+public:
+    explicit TestBaseThis(std::shared_ptr<Container> c_ptr)
+    {
+        spdlog::info(
+            "constructor TestBaseThis this type:{} addr:{}", typeid(this).name(), (void*)(this));
+        (c_ptr->m_vec).push_back(this);
+    }
+    virtual void func() { spdlog::info("TestBaseThis call"); }
+};
+
+class DerivedTestThis : public TestBaseThis
+{
+public:
+    explicit DerivedTestThis(std::shared_ptr<Container> c_ptr)
+        : TestBaseThis(c_ptr)
+    {
+        spdlog::info(
+            "constructor DerivedTestThis this type:{} addr:{}", typeid(this).name(), (void*)(this));
+    }
+    void func() override { spdlog::info("DerivedTestThis call"); }
+};
+
+
+
+
 
 
 

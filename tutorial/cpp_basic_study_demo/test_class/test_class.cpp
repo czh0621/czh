@@ -62,7 +62,7 @@ void test_multi_public()
             dynamic_cast<BaseA*>(pB);   // 此处dynamic_cast会调整vptr，将指向B类的vptr改为指向A类
         if (pA1 != nullptr) {
             spdlog::info("pA1 ptr is not nullptr");   // 调用A虚函数表的虚函数
-            pA1->funcA();
+            pA1->funcA();                             // Derived2
             // pA1->funcB(); error  A类 no funcB
             pA1->common_func();
             pA1->func();
@@ -80,6 +80,7 @@ void test_multi_public()
             // pA1->commonB() error 同上
         }
     }
+    // 重点是这种情况！由于上述转换的指针恰好指向的基类的第一个类，不需要VPTR指针移动
     spdlog::info("BaseA*(pointer to Derived2)--->BaseB*----------------------");
     {
         BaseB* pB2 = dynamic_cast<BaseB*>(pA);   // 进行了地址偏移，pB2地址指向了BaseB部分地址
@@ -101,18 +102,12 @@ void test_multi_public()
                          (int64_t)pB2);   // 调用A虚函数表的虚函数 140724103650064
 
             // pB2->funcA();
-            pB2->funcB();
+            pB2->funcB();   // 此处实际调用的是A类部分的虚函数表中的第一个函数
             // pB2->common_func();
             // pB2->func();
             // pB2->commonA();
             pB2->commonB();
         }
-
-
-        auto ptr = &d;
-        spdlog::info("ptr addr :{}", (int64_t)ptr);   // 调用A虚函数表的虚函数
-        ptr->funcB();
-        ptr->commonB();
     }
 }
 
@@ -178,16 +173,27 @@ void test_virtual_class()
     b->vfunc2();   // "ClassC::vfunc2()"	C类的虚函数表重写把vfunc2()
 }
 
+
+void test_this()
+{
+    auto            c = std::make_shared<Container>();
+    DerivedTestThis d(c);
+    auto            ptr = c->get_ptr();
+    ptr->func();
+}
+
 int main()
 {
     // test_class_memory();
 
     //    test_virtual_class();
 
-    test_multi_public();
+    //    test_multi_public();
 
     //    test_class_constructor();
 
     //    test_class_special_mem_func();
+
+    test_this();
     return 0;
 }
