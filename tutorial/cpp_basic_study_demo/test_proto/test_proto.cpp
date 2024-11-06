@@ -88,16 +88,21 @@ void test_pb_value()
     else {
         spdlog::info("person has default name");
     }
-    tutorial::Test test;
-    if (test.has_price()) {
-        spdlog::info("Test has price:{}", test.has_price());
-    }
 }
 
+class test
+{
+public:
+    std::string s{100, 'a'};
+};
 
 int main()
 {
     //    test_reflect();
     test_pb_value();
+    auto ss = test().s;
+    ss.clear();
+    ss.resize(11);
+    std::cout << ss;
     return 0;
 }

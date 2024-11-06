@@ -5,6 +5,12 @@
  * @author     czh
  */
 #include "class.h"
+#include <chrono>
+#include <linux/unistd.h>
+#include <sstream>
+#include <sys/syscall.h>
+#include <thread>
+#include <unistd.h>
 void test_class_memory()
 {
     spdlog::info("empty class memory size:{}", sizeof(EmptyClass));
@@ -182,18 +188,76 @@ void test_this()
     ptr->func();
 }
 
-int main()
+void test_lambda()
 {
-    // test_class_memory();
-
-    //    test_virtual_class();
-
-    //    test_multi_public();
-
-    //    test_class_constructor();
-
-    //    test_class_special_mem_func();
-
-    test_this();
-    return 0;
+    F f;
+    f.call(1);
 }
+
+
+void test_jicheng()
+{
+    //    ClassAA* p = new ClassCC();
+    //    // p->func(1);   // error no func 基类虚表无此函数 没有override
+    //    auto* ptr = new ClassCC();
+    //    //    ptr->test_func(1);
+
+    char s[100] = "";
+    char s1[100];
+    char s2[100];
+    char s3[100];
+    s3[0] = '\0';
+    strcpy(s1, std::string("").c_str());
+    strcpy(s2, "\0");
+    spdlog::info("s:{} s1:{} s2:{} s3:{}", s, s1, s2, s3);
+}
+#include <functional>
+#include <map>
+constexpr double EPS = 1e-8;
+inline bool      EQ(double d1, double d2, double ep = EPS)
+{
+    return std::fabs(d1 - d2) < ep;
+}
+static const std::map<std::string, bool (*)(double, double, double)> mp = {{"1", &EQ}};
+
+
+
+bool (*func)(double, double, double);
+
+void test_thread()
+{
+    std::thread t([]() {
+        std::stringstream s;
+        s << std::this_thread::get_id();
+        spdlog::info("tid:{}", s.str());
+        uint64_t tid = pthread_self();
+        spdlog::info("tid:{}", static_cast<size_t>(::syscall(__NR_gettid)));
+    });
+    t.detach();
+}
+
+
+
+
+
+
+// int main()
+//{
+//     // test_class_memory();
+//
+//     //    test_virtual_class();
+//
+//     //    test_multi_public();
+//
+//     //    test_class_constructor();
+//
+//     //    test_class_special_mem_func();
+//
+//     //    test_this();
+//     //    test_lambda();
+//
+//     //    test_jicheng();
+//     test_thread();
+//     std::this_thread::sleep_for(std::chrono::seconds(5));
+//     return 1;
+// }

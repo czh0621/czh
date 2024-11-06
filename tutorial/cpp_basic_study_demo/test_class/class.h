@@ -291,6 +291,80 @@ public:
 
 
 
+class A
+{
+
+public:
+    virtual ~A() = default;
+    virtual void func(){};
+    template<typename T>
+    void Register(T* object, void (T::*method)(int i))
+    {
+        m_cb = [object, method](int i) { (*object.*method)(i); };
+    }
+    void call(int i) { m_cb(i); }
+
+private:
+    std::function<void(int)> m_cb = nullptr;
+};
+
+class B : public A
+{
+    void func() override {}
+};
+
+class F
+{
+public:
+    F()
+    {
+        //        m_a.Register(this, &F::pt_func); //ok
+        m_a.Register(this, &F::pv_func);
+    }
+
+public:
+    void p_func(int i) { spdlog::info("call p_func"); }
+    void call(int i) { m_a.call(i); }
+
+protected:
+    void pt_func(int i) { spdlog::info("call pt_func"); }
+
+private:
+    void pv_func(int i) { spdlog::info("call pv_func"); }
+    A    m_a;
+};
+
+
+class ClassAA
+{
+public:
+    virtual void func() { spdlog::info("ClassAA call func"); }
+    void         test_func(int x) { spdlog::info("ClassAA call test_func"); }
+};
+
+class ClassBB : public ClassAA
+{};
+
+class ClassCC : public ClassBB
+{
+public:
+    virtual void func(int i)
+    {
+        spdlog::info("ClassBB call func");
+        this->ClassBB::func();   //
+    }
+    void test_func(int y)
+    {
+        spdlog::info("ClassCC call test_func");
+        this->test_func(y);   // call CC test_func
+    }
+};
+
+
+
+
+
+
 
 
 

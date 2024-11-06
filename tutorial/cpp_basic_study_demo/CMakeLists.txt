@@ -30,22 +30,19 @@ add_executable(s_test_class ${test_class})
 target_link_libraries(s_test_class spdlog::spdlog)
 
 #
+find_package(Protobuf REQUIRED)
 
 add_subdirectory(test_proto)
 
 aux_source_directory(${PROTO_INCLUDE_PATH} PROTO_SRCS)
 
-message(STATUS ${PROTO_SRCS})
-
 add_library(test_proto STATIC ${PROTO_SRCS})
 
 add_executable(s_test_proto test_proto/test_proto.cpp)
 
-message(STATUS ${PROTO_PATH})
+target_link_libraries(s_test_proto PUBLIC test_proto protobuf::libprotobuf spdlog)
 
-target_include_directories(s_test_proto PUBLIC ${PROTO_INCLUDE_PATH})
-
-target_link_libraries(s_test_proto PUBLIC test_proto protobuf spdlog::spdlog)
+target_include_directories(s_test_proto PRIVATE ${PROTO_INCLUDE_PATH})
 
 
 aux_source_directory(test_memory test_memory)
@@ -60,5 +57,10 @@ aux_source_directory(test_stl test_stl)
 add_executable(s_test_stl ${test_stl})
 
 target_link_libraries(s_test_stl spdlog::spdlog)
+
+
+aux_source_directory(test_reference test_reference)
+add_executable(s_test_reference ${test_reference})
+target_link_libraries(s_test_reference spdlog::spdlog)
 
 

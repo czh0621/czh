@@ -7,7 +7,7 @@
 
 #include "const_static.h"   //全局变量重定义了
 #include <string>
-
+#include <typeinfo>
 // cpp 中进行类外初始化
 std::string const_static::m_s = "static_member";
 

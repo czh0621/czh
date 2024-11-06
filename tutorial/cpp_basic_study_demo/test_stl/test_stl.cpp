@@ -10,7 +10,9 @@
 #include <queue>
 #include <spdlog/spdlog.h>
 #include <thread>
+#include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -275,8 +277,16 @@ void test_vector()
     //    v3.emplace_back(std::move(m_obj1));
 }
 
+enum class Flag
 {
-    std::array
+    Open  = 0,
+    close = 1
+};
+
+void test_unordered_map()
+{
+    //    std::unordered_map<std::tuple<int, Flag>, int> mp; //增加hash
+    std::map<std::tuple<int, Flag>, int> m;
 }
 
 

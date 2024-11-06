@@ -17,7 +17,6 @@ endif ()
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/future future_src)
 
-
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core_util/limit_filter limiter_src)
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core_util/thread_pool thread_pool_src)

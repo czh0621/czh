@@ -148,6 +148,121 @@ public:
 };
 
 
+template<class Caller>
+struct Kernel
+{
+    Kernel(Caller* caller)
+        : mCaller(caller)
+    {}
+    void    Print() { std::cout << mCaller->mV << "\n"; }
+    Caller* mCaller;
+};
+template<template<class> class Kernel>
+struct Caller
+{
+    using KERNEL = Kernel<Caller<Kernel>>;
+    friend KERNEL;
+
+public:
+    Caller()
+        : mKernel(this)
+        , mV(1.0)
+    {}
+    void Run() { mKernel.Print(); }
+
+private:
+    double mV;
+    KERNEL mKernel;
+};
+
+
+
+class SessionBase
+{
+public:
+    virtual void func() { spdlog::info("SessionBase call func"); }
+
+    void common_func() { spdlog::info("SessionBase call common_func"); };
+
+    virtual ~SessionBase() = default;
+};
+
+
+
+template<typename ServerType, typename Session>
+class server : public Session
+{
+public:
+    Session* build_session()
+    {
+        spdlog::info("call build_session");
+        Session* b = new Session();
+        return b;
+    }
+
+    int get_value()
+    {
+        spdlog::info("server call get_value");
+        return m_value;
+    }
+
+private:
+    ServerType m_value{1};
+};
+// tcp seesion
+template<typename ServerType, typename SessionType, template<typename, typename> class server>
+class session : public SessionType
+{
+public:
+    ~session()
+    {
+        if (m_server) {
+            delete m_server;
+            m_server = nullptr;
+        }
+    }
+    using Server = server<ServerType, session>;
+
+    SessionType* get_ptr() { return this; }
+
+    void func() override { spdlog::info("session call func"); }
+
+    void call_server()
+    {
+        if (!m_server) {
+            m_server = new Server();
+        }
+        m_server->get_value();
+    }
+    SessionType* call_server_build_sesion() { return m_server->build_session(); }
+
+
+
+private:
+    Server* m_server{nullptr};
+};
+
+
+void test()
+{
+    using Session     = session<int, SessionBase, server>;
+    using server_type = Session::Server;
+    spdlog::info(
+        "session type:{},server_type :{}", typeid(Session).name(), typeid(server_type).name());
+    auto session_ptr = std::make_shared<Session>();
+    auto p           = session_ptr->get_ptr();
+    p->common_func();
+    p->func();
+    static_cast<Session*>(p)->call_server();
+    auto seesion_p = static_cast<Session*>(p)->call_server_build_sesion();
+    seesion_p->common_func();
+    seesion_p->func();
+    delete seesion_p;
+}
+
+
+
+
 void test_template_func()
 {   // g_test_func 函数作为参数退化成函数指针
     myFunction(g_test_func);
@@ -224,8 +339,7 @@ void test_decltype()
                  std::is_same<decltype(val4), const int>::value);
 }
 
-namespace test {
-// void expandArgs() {}
+
 
 template<typename T, typename... Ts>
 void expandArgs(const T& t, const Ts&... ts)
@@ -252,30 +366,57 @@ void printTuple(F&& f, const std::tuple<Ts...>& t)
 {
     printTupleImpl(f, t, std::index_sequence_for<Ts...>{});
 }
-}   // namespace test
+
 
 void test_fold_expr()
 {
-    using namespace test;
+    //    using namespace test;
     expandArgs(1, 2, 3, 4);
     printTuple([](auto& t) { std::cout << t << std::endl; }, std::tuple<int, int>{1, 2});
 };
 
 //
-template<typename... Ts>
-void printSizeOf()
+// template<typename... Ts>
+// void printSizeOf()
+//{
+//    std::cout << "Size of Ts: " << sizeof(Ts...) << std::endl;
+//}
+//
+// template<typename... Ts>
+// void printSizeOf()
+//{
+//    std::cout << "Size of Ts: " << sizeof...(Ts) << std::endl;
+//}
+
+
+
+void test_true(std::true_type)
 {
-    std::cout << "Size of Ts: " << sizeof(Ts...) << std::endl;
+    spdlog::info("call test_true");
 }
 
-template<typename... Ts>
-void printSizeOf()
+void test_false(std::false_type)
 {
-    std::cout << "Size of Ts: " << sizeof...(Ts) << std::endl;
+    spdlog::info("call test_false");
+}
+
+void test_is_same(int i)
+{
+    test_true(std::is_same<decltype(i), int>::type{});
 }
 
 
-void test_sizeof() {}
+
+void test_sort()
+{
+    auto cmp = [](std::string s1, std::string s2) { return strcmp(s1.c_str(), s2.c_str()) >= 0; };
+
+    auto        ret = cmp("123", "12");
+    std::string s;
+    strcpy((char*)s.c_str(), "");
+    spdlog::info("ret :{} s:{}", ret, s);
+}
+
 
 
 int main()
@@ -292,5 +433,10 @@ int main()
 
     //    test_fold_expr();
 
+    //    test();
+
+    //    test_is_same(1);
+
+    test_sort();
     return 0;
 }
