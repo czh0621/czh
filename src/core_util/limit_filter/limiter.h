@@ -28,7 +28,7 @@ namespace czh { namespace limiter {
         {
             auto period    = std::chrono::system_clock::now() - m_current_time;
             auto ms_peroid = std::chrono::duration_cast<std::chrono::milliseconds>(period);
-            spdlog::info("count {} time_period:{}", count, ms_peroid.count());
+            spdlog::info("count {} time_period:{}", count.load(), ms_peroid.count());
             if (ms_peroid > m_window_time) {
                 count.store(0);
                 m_current_time = std::chrono::system_clock::now();

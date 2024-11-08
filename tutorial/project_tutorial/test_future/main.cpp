@@ -264,16 +264,17 @@ void test_when_all()
 
     Promise<int> prom1;
     auto         f1 = prom1.get_future().then([](Try<int>&& i) {
-        spdlog::info("future1 call:{} ", i);
+        spdlog::info("future1 call:{} ", i.value());
         return 1;
     });
 
     Promise<int> prom2;
-    auto f2 = prom2.get_future().then([](Try<int>&& i) { spdlog::info("future2 call:{} ", i); });
+    auto         f2 =
+        prom2.get_future().then([](Try<int>&& i) { spdlog::info("future2 call:{} ", i.value()); });
 
     auto fut = when_all(f1, f2).then([](std::tuple<Try<int>, Try<void>>&& t) {
         spdlog::info("call when all then");
-        spdlog::info("get fut1value:{}", std::get<0>(t));
+        spdlog::info("get fut1value:{}", std::get<0>(t).value());
     });
 
     std::thread t([prom1, prom2]() mutable {

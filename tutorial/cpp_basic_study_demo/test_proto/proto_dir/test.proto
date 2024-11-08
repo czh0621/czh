@@ -21,6 +21,8 @@ message Person {
 
   repeated PhoneNumber phones = 5;
 
+  bytes info = 6;
+
 }
 
 message AddressBook {

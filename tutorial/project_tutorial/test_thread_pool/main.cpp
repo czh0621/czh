@@ -1,13 +1,13 @@
-// #include "../../src/thread_pool/thread_pool.h"
+// #include "czh/src/core_util/thread_pool/thread_pool.h"
 
-#include "threadpool.h"   //简写形式 需要cmake中指定头文件搜索路径
+#include "thread_pool.h"   //简写形式 需要cmake中指定头文件搜索路径
 #include <vector>
 
 int add(int x, int y)
 {
     return x + y;
 }
-
+using namespace czh::core;
 void test_thread_pool_orm()
 {
     std::vector<std::future<int>> v;

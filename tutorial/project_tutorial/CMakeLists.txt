@@ -1,4 +1,5 @@
-#add_subdirectory(test_thread_pool ${test_thread_pool})
+
+add_subdirectory(test_thread_pool)
 
 #
 aux_source_directory(test_future test_future)

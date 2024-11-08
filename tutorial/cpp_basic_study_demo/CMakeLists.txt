@@ -8,11 +8,7 @@ target_link_libraries(s_test_smart_ptr spdlog::spdlog)
 
 #
 
-aux_source_directory(test_core test_core)
-
-add_executable(s_test_core ${test_core})
-
-target_link_libraries(s_test_core spdlog::spdlog)
+#add_subdirectory(test_core)
 
 #
 

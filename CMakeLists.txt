@@ -29,9 +29,6 @@ find_package(spdlog REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} spdlog::spdlog)
 
-# 使用 include_directories 可以在源文件中include 简写头文件，不需要写路径
-#include_directories(${PROJECT_SOURCE_DIR}/src/thread_pool)
-
 
 if (BUILD_TUTORIAL)
     add_subdirectory(tutorial)

@@ -241,23 +241,23 @@ void test_thread()
 
 
 
-// int main()
-//{
-//     // test_class_memory();
-//
-//     //    test_virtual_class();
-//
-//     //    test_multi_public();
-//
-//     //    test_class_constructor();
-//
-//     //    test_class_special_mem_func();
-//
-//     //    test_this();
-//     //    test_lambda();
-//
-//     //    test_jicheng();
-//     test_thread();
-//     std::this_thread::sleep_for(std::chrono::seconds(5));
-//     return 1;
-// }
+int main()
+{
+    // test_class_memory();
+
+    //    test_virtual_class();
+
+    //    test_multi_public();
+
+    //    test_class_constructor();
+
+    //    test_class_special_mem_func();
+
+    //    test_this();
+    //    test_lambda();
+
+    //    test_jicheng();
+    test_thread();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    return 1;
+}
