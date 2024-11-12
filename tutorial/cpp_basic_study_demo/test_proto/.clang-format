@@ -1,0 +1,9 @@
+Language: Proto
+# # 每行字符的限制，0表示没有限制
+ColumnLimit: 10
+# 对齐连续的尾随的注释
+AlignTrailingComments: true
+# 在一个注释中引入换行的penalty
+PenaltyBreakComment: 1000
+# 允许重新排版注释
+ReflowComments: true
