@@ -28,6 +28,11 @@ class CommonClass
     int m_i;
 };
 
+class PureVirtualClass
+{
+    virtual ~PureVirtualClass() = default;
+};
+
 // 默认8字节对齐（最小8B）
 class alignas(8) VirtualClassAlignas
 {
@@ -71,7 +76,7 @@ public:
 
     void func() { spdlog::info("call  Derived2 func"); }
 
-    int m_Derived2;
+    double m_Derived2;
 };
 
 class Test_Base
@@ -83,12 +88,13 @@ public:
         // 此处的this
         // 为基类指针，但是指针地址为子类地址（也是子类对象中的基类部分首地址），它指向正在初始化的对象的内存地址
         spdlog::info(
-            "base constructor this ptr type:{} addr:{}", typeid(*this).name(), (int64_t)this);
+            "base constructor this ptr type:{} addr:{}", typeid(this).name(), (int64_t)this);
     }
 
     void T_func1()
     {
-        // 此处隐式this 指针 基类类型！会形成多态！
+        spdlog::info(" this ptr type name:{} addr:{} ", typeid(this).name(), (int64_t)this);
+        // 此处隐式this 指针类型为Test_Base 类型
         this->T_func_common();
 
         T_func_common();
@@ -96,6 +102,8 @@ public:
         this->interface_api();
 
         interface_api();
+
+        //        this->derived_func();
     }
 
     virtual void T_func_common() { spdlog::info("call Test_Base T_func_common"); }
@@ -113,12 +121,14 @@ public:
         , Test_Base(x)
     {
         spdlog::info(
-            "derived constructor this ptr type:{} addr:{}", typeid(*this).name(), (int64_t)this);
+            "derived constructor this ptr type:{} addr:{}", typeid(this).name(), (int64_t)this);
     }
 
     void T_func_common() override { spdlog::info("call Test_Derived T_func_common"); }
 
     void interface_api() override { spdlog::info("call interface_api instance"); }
+
+    void derived_func() { spdlog::info("call derived_func instance"); }
 
     int m_derived;
 };

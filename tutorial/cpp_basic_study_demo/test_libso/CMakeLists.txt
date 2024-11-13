@@ -1,5 +1,3 @@
-option(USE_DLL "load dll ot not" FALSE)
-
 set(SRC export_so.cpp test_libso.cpp)
 add_library(test_libso SHARED ${SRC})
 target_link_libraries(test_libso)
@@ -14,4 +12,6 @@ target_link_libraries(s_test_static_load_so test_libso)
 add_executable(s_test_dynamic_load_so main2.cpp)
 target_link_libraries(s_test_dynamic_load_so dl)
 
+
+add_subdirectory(test_so_principle)
 

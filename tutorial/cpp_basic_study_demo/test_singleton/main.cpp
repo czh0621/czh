@@ -22,11 +22,11 @@ void test_instance()
     spdlog::info("---------------------------------------");
     // 动态加载动态库测试单例
     using test_singleton_handle = void (*)();
-    std::string dll_path        = "/home/czh/c_code/tmp/tmp.wGfbanx1We/product/lib/libsingleton.so";
+    std::string dll_path        = "/home/czh/c_code/tmp/tmp.RwtOJBZBWC/product/lib/libsingleton.so";
 
     // std::string dll_path = "libsingleton.so";  动态库显示加载可以缩写路径 通过export
     // LD_LIBRARY_PATH=/tmp/czh/product/lib:$LD_LIBRARY_PATH 进当前窗口有效
-    void* handle = dlopen(dll_path.c_str(), RTLD_LAZY);
+    void* handle = dlopen(dll_path.c_str(), RTLD_NOW);
     if (!handle) {
         spdlog::error("load dll error dll_path:{}", dll_path);
         return;

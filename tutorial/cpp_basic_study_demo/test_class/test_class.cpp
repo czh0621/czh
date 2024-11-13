@@ -14,7 +14,10 @@
 void test_class_memory()
 {
     spdlog::info("empty class memory size:{}", sizeof(EmptyClass));
-    spdlog::info("virtual class memory size:{} int* size:{}", sizeof(VirtualClass), sizeof(int*));
+    spdlog::info("PureVirtualClass class memory size:{} void* size:{}",
+                 sizeof(PureVirtualClass),
+                 sizeof(void*));
+    spdlog::info("virtual class memory size:{} void* size:{}", sizeof(VirtualClass), sizeof(void*));
     spdlog::info("common class memory size:{}", sizeof(CommonClass));
     spdlog::info("VirtualClassAlignas class memory size:{}", sizeof(VirtualClassAlignas));
 }
@@ -22,50 +25,59 @@ void test_class_memory()
 void test_multi_public()
 {
     Derived2 d;
+    // 此处基类指针指向的是vptr地址
     BaseA*   pA = &d;
     BaseB*   pB = &d;
-    spdlog::info("BaseA*(pointer to Derived2)--->Derived2*----------------------");
-    {
-        // 基类转子类，此处不涉及多态
-        Derived2* pD = dynamic_cast<Derived2*>(pA);
-        if (pD != nullptr) {
-            spdlog::info("pD ptr is not nullptr ");
-            // 以下都是子类common调用
-            pD->funcA();
-            pD->funcB();
-            pD->common_func();
-            pD->func();
-            pD->commonA();
-            pD->commonB();
-        }
-        spdlog::info("----------------------");
-        {
-            // 以下都是子类common调用
-            auto* tmp = (Derived2*)pA;
-            tmp->funcA();
-            tmp->funcB();
-            tmp->common_func();
-            tmp->func();
-            tmp->commonA();
-            tmp->commonB();
-        }
-        spdlog::info("----------------------");
-        {
-            // 以下都是子类common调用
-            auto* tmp = (Derived2*)pB;
-            tmp->funcA();
-            tmp->funcB();
-            tmp->common_func();
-            tmp->func();
-            tmp->commonA();
-            tmp->commonB();
-        }
-    }
+    spdlog::info("memory size:{} {} addr:{} {} {}",
+                 sizeof(BaseA),
+                 sizeof(d),
+                 (int64_t)(&d),
+                 (int64_t)pA,
+                 (int64_t)pB);
+    spdlog::info("funcA  funcB被子类重写 func被覆盖");
+    //    spdlog::info("BaseA*(pointer to Derived2)--->Derived2*----------------------");
+    //    {
+    //        // 基类转子类，此处不涉及多态
+    //        Derived2* pD = dynamic_cast<Derived2*>(pA);
+    //        if (pD != nullptr) {
+    //            spdlog::info("pD ptr is not nullptr ");
+    //            // 以下都是子类common调用
+    //            pD->funcA();
+    //            pD->funcB();
+    //            pD->common_func();
+    //            pD->func();
+    //            pD->commonA();
+    //            pD->commonB();
+    //        }
+    //        spdlog::info("----------------------");
+    //        {
+    //            // 以下都是子类common调用
+    //            auto* tmp = (Derived2*)pA;
+    //            tmp->funcA();
+    //            tmp->funcB();
+    //            tmp->common_func();
+    //            tmp->func();
+    //            tmp->commonA();
+    //            tmp->commonB();
+    //        }
+    //        spdlog::info("----------------------");
+    //        {
+    //            // 以下都是子类common调用
+    //            auto* tmp = (Derived2*)pB;
+    //            tmp->funcA();
+    //            tmp->funcB();
+    //            tmp->common_func();
+    //            tmp->func();
+    //            tmp->commonA();
+    //            tmp->commonB();
+    //        }
+    //    }
     spdlog::info("BaseB*(pointer to Derived2)--->BaseA*----------------------");
     {
         // 基类2转基类1，指针指向的还是子类对象 所以用的还是子类的虚函数表
         BaseA* pA1 =
             dynamic_cast<BaseA*>(pB);   // 此处dynamic_cast会调整vptr，将指向B类的vptr改为指向A类
+        spdlog::info("d:{} pA1 {} pB {}", (int64_t)(&d), (int64_t)pA1, (int64_t)pB);
         if (pA1 != nullptr) {
             spdlog::info("pA1 ptr is not nullptr");   // 调用A虚函数表的虚函数
             pA1->funcA();                             // Derived2
@@ -117,14 +129,19 @@ void test_multi_public()
     }
 }
 
+// 测试普通函数内部调用虚函数
 void test_class_constructor()
 {
     Test_Base* ptr = new Test_Derived(1);
+
+    spdlog::info("addr:{}", (int64_t)ptr);
 
     ptr->T_func1();
 
     auto d = Test_Derived(2);
     d.T_func1();
+
+    //    error
     //    auto b = Test_Base(2);
     //    b.T_func1();
 }
@@ -159,7 +176,6 @@ void test_virtual_class()
         a->vfunc1();   // "ClassB::vfunc1()"  B类的虚函数表重写了A类的vfunc1()
         a->vfunc2();   // "ClassA::vfunc2()"  B类的虚函数表 未重写直接继承A类的虚函数
     }
-
 
 
     // 多次单继承调用
@@ -211,18 +227,7 @@ void test_jicheng()
     strcpy(s2, "\0");
     spdlog::info("s:{} s1:{} s2:{} s3:{}", s, s1, s2, s3);
 }
-#include <functional>
-#include <map>
-constexpr double EPS = 1e-8;
-inline bool      EQ(double d1, double d2, double ep = EPS)
-{
-    return std::fabs(d1 - d2) < ep;
-}
-static const std::map<std::string, bool (*)(double, double, double)> mp = {{"1", &EQ}};
 
-
-
-bool (*func)(double, double, double);
 
 void test_thread()
 {
@@ -243,11 +248,11 @@ void test_thread()
 
 int main()
 {
-    // test_class_memory();
+    //    test_class_memory();
 
     //    test_virtual_class();
 
-    //    test_multi_public();
+    test_multi_public();
 
     //    test_class_constructor();
 
@@ -256,8 +261,7 @@ int main()
     //    test_this();
     //    test_lambda();
 
-    //    test_jicheng();
-    test_thread();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    /*    test_thread();
+        std::this_thread::sleep_for(std::chrono::seconds(5));*/
     return 1;
 }
